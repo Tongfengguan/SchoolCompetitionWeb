@@ -24,7 +24,6 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
         // 1. 根据用户名去数据库查
         User user = userRepository.findByUsername(loginRequest.getUsername());
-
         // 2. 判断用户是否存在，以及密码是否正确
         if (user == null || !user.getPassword().equals(loginRequest.getPassword())) {
             return ResponseEntity.status(401).body("账号或密码错误");

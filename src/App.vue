@@ -59,4 +59,15 @@ const logout = () => {
 .main-content {
   min-height: 100vh;
 }
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
 </style>
