@@ -14,4 +14,6 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     // 2. ✨ 新增：检查某人是否报过名
     // existsBy + 字段1 + And + 字段2 -> 返回 true 或 false
     boolean existsByCompetitionIdAndStudentId(Long competitionId, String studentId);
+
+    void deleteByCompetitionId(Long competitionId);
 }

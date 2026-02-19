@@ -4,6 +4,8 @@ import com.tfgkk.schoolcompetition.entity.Competition;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * 数据库访问接口
  * 继承 JpaRepository <实体类, 主键类型>
@@ -11,5 +13,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface CompetitionRepository extends JpaRepository<Competition, Long> {
-    // 这里暂时什么都不用写，Spring Boot 会自动帮我们实现基础功能！
+    // 忽略大小写的模糊搜索：匹配标题或描述
+    List<Competition> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(String title, String desc);
+
+    // 默认列表按 ID 降序排列
+    List<Competition> findAllByOrderByIdDesc();
 }

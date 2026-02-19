@@ -40,4 +40,26 @@ public class RegistrationController {
         Registration saved = registrationRepository.save(registration);
         return ResponseEntity.ok(saved);
     }
+
+    /**
+     * 审核接口
+     * 路径示例：PUT /api/registrations/5/audit?status=1
+     */
+    @PutMapping("/{id}/audit")
+    public ResponseEntity<?> auditStudent(@PathVariable Long id, @RequestParam Integer status) {
+        return registrationRepository.findById(id).map(registration -> {
+            registration.setStatus(status);
+            registrationRepository.save(registration);
+            return ResponseEntity.ok().body("审核成功");
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 删除单条报名记录 (取消资格)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRegistration(@PathVariable Long id) {
+        registrationRepository.deleteById(id);
+        return ResponseEntity.ok().body("删除成功");
+    }
 }

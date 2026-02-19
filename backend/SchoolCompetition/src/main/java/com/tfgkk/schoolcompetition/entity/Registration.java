@@ -28,6 +28,12 @@ public class Registration {
     @Column(name = "create_time")
     private LocalDateTime createTime;
 
+    @Column(nullable = false)
+    private Integer status = 0;
+
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
+
     // 构造函数前，我们设一个默认时间
     @PrePersist
     public void prePersist() {
