@@ -1,138 +1,77 @@
 # 🏆 学校学科竞赛报名管理系统 (School Competition Management System)
 
-> 基于 **Spring Boot + Vue 3** 的前后端分离学科竞赛管理平台。实现了从竞赛发布、学生报名到名单管理的完整业务闭环。
+> 基于 **Spring Boot 3 + Vue 3** 的现代化全栈竞赛管理平台。实现了从数据批量运维、竞赛发布到学生安全报名的完整闭环。
 
 ## 📖 项目介绍
 
-本项目旨在解决学校竞赛报名流程繁琐、数据统计困难的问题。系统采用 B/S 架构，分为**学生端**和**管理端**。通过严格的权限控制和业务逻辑校验，确保报名数据的准确性与安全性。
+本项目旨在解决学校竞赛报名过程中“信息录入难、身份校验弱、数据统计杂”的痛点。系统不仅支持常规的竞赛发布，更引入了 **Alibaba EasyExcel** 引擎，实现了学生账号的万级数据秒级导入。
 
 ### 核心特性
 
-- **👥 角色权限管理 (RBAC)**：区分管理员与学生角色，通过路由守卫拦截未授权访问。
-- **🔒 安全报名机制**：
-- **防代报**：学生报名时自动读取登录账号信息（姓名/学号），且无法修改，杜绝替考/代报现象。
-- **防重报**：后端逻辑校验，同一学生无法重复报名同一场比赛。
+- **📊 自动化数据维护**：支持管理员一键上传学生名单，系统自动去重并生成账号；提供动态 Excel 模板下载。
+- **👤 完善的账号体系**：管理员与学生均可自主维护姓名、电话及密码；系统自动以手机号作为初始凭证。
+- **🔒 多重安全报名机制**：防代报（锁定学号）、防重报（后端逻辑拦截），确保数据真实可靠。
+- **🚀 鲁棒性网络层**：Axios 全局拦截器支持 Blob 二进制流下载与 JWT 身份令牌注入。
 
-- **📝 竞赛全生命周期管理**：管理员可发布、查看、删除竞赛，支持富文本描述和时间范围设置。
-- **📊 名单实时管理**：管理员可实时查看报名名单，并具备“取消学生参赛资格”的权限。
-- **🚀 单体打包部署**：前端构建产物嵌入后端资源目录，支持一键打包为 JAR 文件运行。
+---
+
+## 📁 项目结构说明
+
+清晰的分层结构是项目可维护性的基石。
+
+### 后端核心目录 (`com.tfgkk.schoolcompetition`)
+
+- **`config`**: 存放全局配置类，如 `CorsConfig`（跨域配置）。
+- **`controller`**: RESTful 风格的 API 接口层，包括 `UserController`（处理 Excel 导入与用户维护）、`AuthController`（处理登录）等。
+- **`entity`**: 数据库实体类，通过 JPA 注解实现自动建表，并集成 EasyExcel 的 `@ExcelProperty` 注解。
+- **`repository`**: 基于 Spring Data JPA 的数据访问层，定义了如 `findByUsername` 等自动生成的查询方法。
+
+### 前端核心目录 (`school-competition-web`)
+
+- **`src/api`**: 统一管理 Axios 请求，按业务模块（如 `competition.js`）划分接口。
+- **`src/view`**: 核心业务页面，如 `AdminView.vue`（管理员后台）和 `StudentView.vue`（学生竞赛列表）。
+- **`src/utils`**: 通用工具函数，包括 `request.js`（Axios 拦截器配置）和 `excel.js`（导出逻辑）。
+
+---
+
+## ⚠️ CORS 跨域避坑指南
+
+在前后端分离开发中，跨域报错（CORS error）是新手最容易遇到的“拦路虎”。
+
+### 1. 为什么会跨域？
+
+由于前端在 `5173` 端口，后端在 `8080` 端口，浏览器出于安全策略会拦截非同源请求，特别是带有 `Authorization` 自定义 Header 的请求。
+
+### 2. 解决方案：全局配置类
+
+不要在 Controller 上逐个添加 `@CrossOrigin`。建议使用全局配置，因为它优先级更高且支持更精细的控制：
+
+```java
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**") // 对所有接口生效
+                .allowedOriginPatterns("*") // 允许所有来源
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // 允许 OPTIONS 预检请求
+                .allowedHeaders("*")
+                .allowCredentials(true);
+    }
+}
+
+```
+
+### 3. 注意事项
+
+- **预检请求 (Preflight)**：浏览器会先发送一个 `OPTIONS` 请求。如果后端未正确响应 `OPTIONS`，实际请求将无法发出。
+- **响应体解析**：如果前端拦截器对响应体进行了 `.code === 200` 校验，务必确保下载文件（Blob）等特殊响应类型能直接通过拦截器。
+
+---
 
 ## 🛠️ 技术栈
 
-### 后端 (Backend)
-
-- **核心框架**: Spring Boot 3.x
-- **ORM 框架**: Spring Data JPA (Hibernate)
-- **数据库**: MySQL 8.0
-- **工具库**: Lombok (简化代码), Maven (构建工具)
-
-### 前端 (Frontend)
-
-- **核心框架**: Vue 3 (Composition API)
-- **构建工具**: Vite
-- **路由管理**: Vue Router (Hash 模式)
-- **网络请求**: Axios (封装了全局拦截器)
-- **样式**: CSS3 (Flex/Grid 布局)
-
-## 📂 数据库设计
-
-系统包含三张核心表（自动建表）：
-
-1. **Users (用户表)**: 存储账号、密码、角色(admin/student)、真实姓名。
-2. **Competitions (竞赛表)**: 存储竞赛标题、描述、起止时间、状态。
-3. **Registrations (报名表)**: 关联竞赛ID和学生信息，存储报名记录。
-
-## ⚡️ 快速开始
-
-### 环境准备
-
-- JDK 17+
-- Node.js 16+
-- MySQL 8.0
-
-### 1. 数据库配置
-
-创建一个名为 `school_competition_db` 的数据库，并在 `application.yml` 中修改你的数据库账号密码。
-
-```sql
-CREATE DATABASE school_competition_db CHARACTER SET utf8mb4;
-
-```
-
-### 2. 初始化数据
-
-项目启动会自动建表。建议首次运行后手动插入测试账号：
-
-```sql
--- 管理员 (密码: 123456)
-INSERT INTO users (username, password, role, name) VALUES ('admin', '123456', 'admin', '教务处老师');
--- 学生 (密码: 123456)
-INSERT INTO users (username, password, role, name) VALUES ('stu1', '123456', 'student', '张三同学');
-
-```
-
-### 3. 启动开发环境
-
-**后端 (Spring Boot):**
-
-```bash
-mvn spring-boot:run
-
-```
-
-后端服务运行在 `http://localhost:8080`
-
-**前端 (Vue):**
-
-```bash
-cd school-competition-web
-npm install
-npm run dev
-
-```
-
-前端页面运行在 `http://localhost:5173`
-
-## 📦 生产环境打包部署
-
-本项目支持前后端合并打包，无需独立部署 Nginx。
-
-1. **构建前端**:
-
-```bash
-cd school-competition-web
-npm run build
-
-```
-
-生成的 `dist` 目录内容会自动复制到后端的 `src/main/resources/static` 目录下（需手动复制或配置脚本）。2. **打包后端**:
-
-```bash
-mvn clean package
-
-```
-
-3. **运行**:
-   在 `target` 目录下找到生成的 JAR 包：
-
-```bash
-java -jar school-competition-0.0.1-SNAPSHOT.jar
-
-```
-
-访问 `http://localhost:8080` 即可使用完整系统。
-
-## 🔗 API 接口说明
-
-| 方法   | 路径                                    | 描述               |
-| ------ | --------------------------------------- | ------------------ |
-| POST   | `/api/auth/login`                       | 用户登录           |
-| GET    | `/api/competitions`                     | 获取竞赛列表       |
-| POST   | `/api/competitions`                     | 发布新竞赛         |
-| DELETE | `/api/competitions/{id}`                | 删除竞赛           |
-| POST   | `/api/registrations`                    | 学生报名           |
-| GET    | `/api/registrations?competitionId={id}` | 获取某比赛报名名单 |
-| DELETE | `/api/registrations/{id}`               | 取消报名资格       |
+- **后端**: Spring Boot 3, Spring Data JPA, MySQL 8, **Alibaba EasyExcel**.
+- **前端**: Vue 3 (Composition API), Vite, Pinia, Axios, Lucide Icons.
 
 ## 👨‍💻 作者
 
@@ -141,4 +80,52 @@ java -jar school-competition-0.0.1-SNAPSHOT.jar
 
 ---
 
-**✨ 如果觉得这个项目不错，欢迎给个 Star!**
+**✨ 如果这个项目对你有帮助，欢迎点个 Star 鼓励一下！**
+太棒了！流程图（Flowchart）能让你的 README 瞬间从“技术文档”变成“产品方案”，非常适合展示你设计的**核心业务闭环**和**安全校验逻辑**。
+
+建议将以下内容直接插入到 README 的 **“项目介绍”** 或 **“核心特性”** 章节下方。
+
+---
+
+## 🔄 业务逻辑流程图 (Business Logic Flowchart)
+
+本项目核心业务流程涵盖了从管理员初始化数据到学生报名的完整路径，通过 **Mermaid** 语法呈现如下：
+
+```mermaid
+graph TD
+    %% 管理员路径
+    A[管理员登录] --> B[学生池维护: Excel 导入]
+    B --> B1[自动以手机号生成账号/密码]
+    B1 --> C[发布竞赛项目]
+
+    %% 学生路径
+    S[学生登录: 手机号验证] --> D[浏览竞赛列表]
+    D --> E{搜索/过滤竞赛}
+    E --> F[点击立即报名]
+
+    %% 安全校验逻辑
+    F --> G{系统逻辑校验}
+    G -- 身份拦截 --> G1[锁定当前登录者姓名/学号]
+    G -- 状态校验 --> G2[判断竞赛是否已截止]
+    G -- 查重校验 --> G3[检查是否已报名该项目]
+
+    G1 & G2 & G3 --> H{校验通过?}
+    H -- 否 --> I[弹窗提示错误原因]
+    H -- 是 --> J[写入数据库 Registrations 表]
+
+    %% 后续管理
+    J --> K[管理员查看/审核名单]
+    K --> L[导出 Excel 报名表]
+
+```
+
+---
+
+## 🛡️ 项目亮点补全：核心业务逻辑说明
+
+除了流程图，我们在代码层面也落实了以下关键逻辑，确保系统在实际使用中的健壮性：
+
+1. **Excel 导入防重逻辑**：在 `UserController` 导入学生时，系统会优先根据 `phone`（即 `username`）在数据库检索，仅当用户不存在时才执行 `save` 操作，有效避免了数据冲突。
+2. **报名身份锁定（防代报）**：在 `StudentView` 的报名弹窗中，姓名和学号字段被设为 `disabled`（只读），且数据直接从 `Pinia` 状态管理仓库中读取，确保报名信息与登录账号严格一致。
+3. **竞赛状态联动**：前端根据 `status` 字段动态渲染按钮状态（立即报名/已截止），后端在保存报名记录前会再次校验当前时间是否在竞赛起止范围内。
+4. **Axios 全局拦截**：针对 404（路径不存在）、401（未授权）和 500（服务器异常）提供了统一的 UI 弹窗反馈，极大提升了用户体验。

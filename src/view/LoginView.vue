@@ -17,11 +17,11 @@ const handleLogin = async () => {
   if (!form.username || !form.password) return alert("请输入账号密码");
 
   loading.value = true;
-  console.log("准备发送请求，参数为:", JSON.stringify(form));
+  // console.log("准备发送请求，参数为:", JSON.stringify(form));
 
   try {
     const res = await loginApi(form);
-    console.log("API 原始响应:", res); // 观察这里 res 的结构
+    // console.log("API 原始响应:", res); // 观察这里 res 的结构
 
     // 适配拦截器：如果拦截器已经剥离了 data，则直接使用 res
     const userData = res.data || res;

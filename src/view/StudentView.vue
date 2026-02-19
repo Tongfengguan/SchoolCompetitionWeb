@@ -1,15 +1,21 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from "vue"; // 1. 引入 computed
+import { ref, computed, reactive, onMounted } from "vue";
 import { useUserStore } from "@/stores/user";
 import { competitionApi } from "@/api/competition";
+import { useRouter } from "vue-router";
 
 const userStore = useUserStore();
-const competitions = ref([]); // 存放从后端获取的【所有】原始数据
+const router = useRouter();
+
+// ✨ 视图控制：'list' 为竞赛列表，'settings' 为个人设置
+const activeTab = ref("list");
+
+const competitions = ref([]);
 const showRegister = ref(false);
 const loading = ref(false);
-
 const searchQuery = ref("");
 
+// --- 报名表单 ---
 const regForm = reactive({
   competitionId: null,
   competitionTitle: "",
@@ -19,24 +25,33 @@ const regForm = reactive({
   phone: "",
 });
 
-// ✨ 核心逻辑：利用 computed 实现纯前端零延迟搜索
+// --- ✨ 账号维护表单 ---
+const profileForm = reactive({
+  id: userStore.userInfo?.id,
+  username: userStore.userInfo?.username || "",
+});
+
+const pwdForm = reactive({
+  id: userStore.userInfo?.id,
+  oldPassword: "",
+  newPassword: "",
+  confirmPassword: "",
+});
+
 const filteredCompetitions = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
-  if (!keyword) return competitions.value; // 如果没搜，返回全部
-
+  if (!keyword) return competitions.value;
   return competitions.value.filter((item) => {
-    // 同时匹配标题和描述（注意 description 可能是 null 的防御性处理）
     const matchTitle = item.title?.toLowerCase().includes(keyword);
     const matchDesc = item.description?.toLowerCase().includes(keyword);
     return matchTitle || matchDesc;
   });
 });
 
-// 只需要在页面加载时请求一次全部数据
 const fetchCompetitions = async () => {
   loading.value = true;
   try {
-    competitions.value = await competitionApi.getList(); // 不传参，拿全部
+    competitions.value = await competitionApi.getList();
   } catch (error) {
     console.error("加载竞赛列表失败:", error);
   } finally {
@@ -44,17 +59,53 @@ const fetchCompetitions = async () => {
   }
 };
 
+// --- ✨ 修改用户名逻辑 ---
+const handleUpdateUsername = async () => {
+  if (!profileForm.username) return alert("账号名不能为空");
+  try {
+    loading.value = true;
+    await competitionApi.updateProfile(profileForm);
+    alert("✅ 账号名修改成功，请重新登录");
+    handleLogout();
+  } catch (error) {
+    alert("修改失败：账号可能已存在");
+  } finally {
+    loading.value = false;
+  }
+};
+
+// --- ✨ 修改密码逻辑 ---
+const handleUpdatePassword = async () => {
+  if (!pwdForm.oldPassword || !pwdForm.newPassword) return alert("请填写完整");
+  if (pwdForm.newPassword !== pwdForm.confirmPassword)
+    return alert("两次新密码不一致");
+
+  try {
+    loading.value = true;
+    await competitionApi.updatePassword(pwdForm);
+    alert("🔒 密码修改成功，请重新登录");
+    handleLogout();
+  } catch (error) {
+    alert("修改失败：原密码错误");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleLogout = () => {
+  userStore.clearUser();
+  router.push("/login");
+};
+
+// 原有报名逻辑保持不变
 const openRegisterModal = (item) => {
   if (item.status === 0) return;
-
   const user = userStore.userInfo;
   if (!user) return alert("请先登录！");
-
   regForm.competitionId = item.id;
   regForm.competitionTitle = item.title;
   regForm.studentName = user.name || user.username;
   regForm.studentId = user.username;
-
   showRegister.value = true;
 };
 
@@ -79,81 +130,153 @@ onMounted(() => fetchCompetitions());
     <header class="page-header">
       <div class="welcome">
         <h1>👋 同学，你好</h1>
-        <p>探索属于你的学科舞台</p>
+        <p>
+          {{
+            activeTab === "list" ? "探索属于你的学科舞台" : "管理你的账号安全"
+          }}
+        </p>
       </div>
-      <div class="user-info-tag">
-        <i-lucide-user class="svg-icon" />
-        <span>{{ userStore.userInfo?.username }}</span>
+
+      <div class="header-actions">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'list' }"
+          @click="activeTab = 'list'"
+        >
+          <i-lucide-layout-grid class="btn-icon-s" /> 竞赛列表
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'settings' }"
+          @click="activeTab = 'settings'"
+        >
+          <i-lucide-settings class="btn-icon-s" /> 账号维护
+        </button>
+        <div class="user-info-tag" @click="handleLogout" title="点击退出">
+          <i-lucide-log-out class="svg-icon-s" />
+          <span>退出登录</span>
+        </div>
       </div>
     </header>
 
-    <div class="search-section">
-      <div class="search-bar">
-        <i-lucide-search class="search-icon" />
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜索竞赛名称或描述..."
-        />
-        <i-lucide-x
-          v-if="searchQuery"
-          class="clear-icon"
-          @click="searchQuery = ''"
-        />
+    <div v-if="activeTab === 'list'">
+      <div class="search-section">
+        <div class="search-bar">
+          <i-lucide-search class="search-icon" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索竞赛名称或描述..."
+          />
+          <i-lucide-x
+            v-if="searchQuery"
+            class="clear-icon"
+            @click="searchQuery = ''"
+          />
+        </div>
+      </div>
+
+      <div v-if="loading" class="loading-box">
+        <i-lucide-loader-2 class="spinner" /> 正在搜寻竞赛...
+      </div>
+
+      <div v-else class="card-grid">
+        <div
+          v-for="item in filteredCompetitions"
+          :key="item.id"
+          class="comp-card"
+          :class="{ 'is-ended': item.status === 0 }"
+        >
+          <div class="card-icon-header">
+            <i-lucide-award
+              :class="[
+                'svg-icon',
+                item.status === 1 ? 'main-color' : 'gray-color',
+              ]"
+            />
+            <span
+              class="status-tag"
+              :class="item.status === 1 ? 'active' : 'ended'"
+            >
+              <i-lucide-dot /> {{ item.status === 1 ? "报名中" : "已截止" }}
+            </span>
+          </div>
+          <h3>{{ item.title }}</h3>
+          <p class="card-desc">{{ item.description || "暂无比赛描述" }}</p>
+          <div class="card-footer">
+            <div class="meta">
+              <i-lucide-calendar-days class="small-icon" />
+              <span>{{ item.startTime?.substring(0, 10) || "时间待定" }}</span>
+            </div>
+            <button
+              @click="openRegisterModal(item)"
+              class="join-btn"
+              :disabled="item.status === 0"
+            >
+              {{ item.status === 1 ? "立即报名" : "已截止" }}
+              <i-lucide-arrow-right v-if="item.status === 1" class="btn-icon" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-if="loading" class="loading-box">
-      <i-lucide-loader-2 class="spinner" /> 正在搜寻竞赛...
-    </div>
-
-    <div v-else class="card-grid">
-      <div
-        v-for="item in filteredCompetitions"
-        :key="item.id"
-        class="comp-card"
-        :class="{ 'is-ended': item.status === 0 }"
-      >
-        <div class="card-icon-header">
-          <i-lucide-award
-            :class="[
-              'svg-icon',
-              item.status === 1 ? 'main-color' : 'gray-color',
-            ]"
-          />
-          <span
-            class="status-tag"
-            :class="item.status === 1 ? 'active' : 'ended'"
-          >
-            <i-lucide-dot /> {{ item.status === 1 ? "报名中" : "已截止" }}
-          </span>
-        </div>
-
-        <h3>{{ item.title }}</h3>
-        <p class="card-desc">{{ item.description || "暂无比赛描述" }}</p>
-
-        <div class="card-footer">
-          <div class="meta">
-            <i-lucide-calendar-days class="small-icon" />
-            <span>{{ item.startTime?.substring(0, 10) || "时间待定" }}</span>
+    <div v-if="activeTab === 'settings'" class="settings-view">
+      <div class="settings-card">
+        <section class="settings-section">
+          <h3><i-lucide-user-cog class="section-icon" /> 修改登录账号</h3>
+          <div class="form-item">
+            <label>新用户名</label>
+            <input
+              v-model="profileForm.username"
+              placeholder="请输入新账号名称"
+            />
           </div>
           <button
-            @click="openRegisterModal(item)"
-            class="join-btn"
-            :disabled="item.status === 0"
+            @click="handleUpdateUsername"
+            class="btn-submit-s"
+            :disabled="loading"
           >
-            {{ item.status === 1 ? "立即报名" : "已截止" }}
-            <i-lucide-arrow-right v-if="item.status === 1" class="btn-icon" />
+            保存账号修改
           </button>
-        </div>
-      </div>
+        </section>
 
-      <div v-if="filteredCompetitions.length === 0" class="empty-state">
-        <i-lucide-inbox
-          class="empty-icon"
-          style="margin-bottom: 10px; opacity: 0.5"
-        />
-        <div>暂无匹配的竞赛数据</div>
+        <div class="divider"></div>
+
+        <section class="settings-section">
+          <h3><i-lucide-shield-check class="section-icon" /> 修改登录密码</h3>
+          <div class="form-item">
+            <label>当前密码</label>
+            <input
+              v-model="pwdForm.oldPassword"
+              type="password"
+              placeholder="验证原密码"
+            />
+          </div>
+          <div class="form-item">
+            <label>设置新密码</label>
+            <input
+              v-model="pwdForm.newPassword"
+              type="password"
+              placeholder="请输入新密码"
+            />
+          </div>
+          <div class="form-item">
+            <label>确认新密码</label>
+            <input
+              v-model="pwdForm.confirmPassword"
+              type="password"
+              placeholder="再次输入新密码"
+            />
+          </div>
+          <button
+            @click="handleUpdatePassword"
+            class="btn-submit-s danger"
+            :disabled="loading"
+          >
+            更新登录密码
+          </button>
+        </section>
       </div>
     </div>
 
@@ -171,6 +294,10 @@ onMounted(() => fetchCompetitions());
             disabled
             class="readonly-input"
           />
+        </div>
+        <div class="form-item">
+          <label><i-lucide-graduation-cap class="small-icon" /> 班级</label>
+          <input v-model="regForm.className" placeholder="例如：计算机2301" />
         </div>
         <div class="form-item">
           <label><i-lucide-smartphone class="small-icon" /> 手机号</label>
@@ -491,5 +618,112 @@ onMounted(() => fetchCompetitions());
 }
 .btn-cancel:hover {
   background: #f8fafc;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tab-btn {
+  background: white;
+  border: 1px solid #edf2f7;
+  padding: 8px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-icon-s {
+  width: 16px;
+  height: 16px;
+}
+
+.settings-view {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settings-card {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+}
+
+.settings-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+.section-icon {
+  width: 20px;
+  color: #3b82f6;
+}
+
+.divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 30px 0;
+}
+
+.btn-submit-s {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-submit-s.danger {
+  background: #64748b;
+}
+
+.btn-submit-s:hover {
+  filter: brightness(0.9);
+}
+
+.user-info-tag {
+  cursor: pointer;
+}
+
+.user-info-tag:hover {
+  background: #fee2e2;
+  color: #ef4444;
 }
 </style>
