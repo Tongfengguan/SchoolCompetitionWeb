@@ -82,10 +82,6 @@ public class CorsConfig implements WebMvcConfigurer {
 ---
 
 **✨ 如果这个项目对你有帮助，欢迎点个 Star 鼓励一下！**
-太棒了！流程图（Flowchart）能让你的 README 瞬间从“技术文档”变成“产品方案”，非常适合展示你设计的**核心业务闭环**和**安全校验逻辑**。
-
-建议将以下内容直接插入到 README 的 **“项目介绍”** 或 **“核心特性”** 章节下方。
-
 ---
 
 ## 🔄 业务逻辑流程图 (Business Logic Flowchart)
