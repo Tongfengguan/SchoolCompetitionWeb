@@ -33,7 +33,7 @@ const handleLogin = async () => {
     userStore.setUser(userData);
 
     // 跳转逻辑
-    const targetPath = userData.role === "admin" ? "/admin" : "/";
+    const targetPath = userData.role === "admin" ? "/admin" : "/student";
     router.push(targetPath);
   } catch (e) {
     // 👈 找回消失的日志

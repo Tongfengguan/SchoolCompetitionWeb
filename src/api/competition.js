@@ -41,4 +41,8 @@ export const competitionApi = {
   updateProfile: (data) => request.put("/users/profile", data),
   // 修改个人密码
   updatePassword: (data) => request.put("/users/password", data),
+  // 获取所有账号信息
+  getUserList: () => request.get("/users"),
+  // 删除账号
+  deleteUser: (id) => request.delete(`/users/${id}`),
 };

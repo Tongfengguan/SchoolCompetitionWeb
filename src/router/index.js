@@ -1,48 +1,79 @@
-import { createRouter, createWebHashHistory } from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
+import { useUserStore } from "@/stores/user";
 
-import StudentView from "@/view/StudentView.vue";
-import AdminView from "@/view/AdminView.vue";
-import LoginView from "@/view/LoginView.vue";
+// 1. 定义页面路由
+const routes = [
+  {
+    path: "/",
+    redirect: "/login", // 默认重定向到登录页
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("@/view/LoginView.vue"),
+    meta: { requiresAuth: false }, // 明确标记不需要登录
+  },
+  {
+    path: "/admin",
+    name: "Admin",
+    component: () => import("@/view/AdminView.vue"),
+    meta: {
+      requiresAuth: true,
+      role: "admin", // ✨ 核心：打上“仅限管理员”的标签
+    },
+  },
+  {
+    path: "/student",
+    name: "Student",
+    component: () => import("@/view/StudentView.vue"),
+    meta: {
+      requiresAuth: true,
+      role: "student", // ✨ 核心：打上“仅限学生”的标签
+    },
+  },
+  // 捕获所有未定义的路由，重定向到登录页（防止 404）
+  {
+    path: "/:pathMatch(.*)*",
+    redirect: "/login",
+  },
+];
 
 const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: "/login",
-      name: "login",
-      component: LoginView,
-    },
-    {
-      path: "/",
-      name: "student",
-      component: StudentView,
-    },
-    {
-      path: "/admin",
-      name: "admin",
-      component: AdminView,
-    },
-  ],
+  history: createWebHistory(),
+  routes,
 });
 
-// 路由守卫：每次跳转页面前，都会执行这里
+// 2. ✨ 全局前置守卫
 router.beforeEach((to, from, next) => {
-  // 1. 从浏览器缓存里拿用户信息
-  const userStr = localStorage.getItem("user");
+  const userStore = useUserStore();
 
-  // 2. 如果要去的是登录页，直接放行
-  if (to.path === "/login") {
-    next();
-    return;
+  // 💡 核心修复：检查 userInfo 是否存在，而不是 token
+  // 只要 userInfo 里有数据（比如有个 id 或者是个非空对象），就认为已经成功登录
+  const isAuthenticated =
+    !!userStore.userInfo && Object.keys(userStore.userInfo).length > 0;
+
+  const userRole = userStore.userInfo?.role;
+
+  // 规则 A：如果前往的页面需要登录，但用户没登录
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    alert("请先登录系统！");
+    return next("/login");
   }
 
-  // 3. 如果没登录（没拿到 user），强制跳回登录页
-  if (!userStr) {
-    next("/login");
-    return;
+  // 规则 B：如果页面对角色有要求，且当前用户角色不匹配
+  if (to.meta.role && userRole !== to.meta.role && userRole === "student") {
+    alert("❌ 越权访问拦截：您没有权限进入该页面！");
+    if (userRole === "student") return next("/student");
+    return next("/login");
   }
 
-  // 4. 已登录，放行
+  // 规则 C：如果已登录用户还要往登录页跑，直接送回他的主页
+  if (to.path === "/login" && isAuthenticated) {
+    if (userRole === "admin") return next("/admin");
+    if (userRole === "student") return next("/student");
+  }
+
+  // 所有检查通过，放行！
   next();
 });
 

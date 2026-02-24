@@ -9,9 +9,9 @@ const route = useRoute(); //以此判断当前页面
 const isLoginPage = computed(() => route.path === "/login");
 
 // 退出登录方法
-const logout = () => {
-  localStorage.removeItem("user"); // 清除缓存
-  router.push("/login"); // 跳回登录页
+const handleLogout = () => {
+  userStore.clearUser();
+  router.push("/login");
 };
 </script>
 
@@ -19,9 +19,7 @@ const logout = () => {
   <div class="app-shell">
     <nav v-if="!isLoginPage" class="navbar">
       <div class="logo">学校竞赛报名系统</div>
-      <div class="links">
-        <button @click="logout" class="logout-btn">退出登录</button>
-      </div>
+      <div class="links"></div>
     </nav>
 
     <main class="main-content">

@@ -20,11 +20,11 @@ import { competitionApi } from "@/api/competition";
 const userStore = useUserStore();
 const router = useRouter();
 
-// ✨ 1. 新增：文件上传引用
 const fileInput = ref(null);
-
-// ✨ 视图切换控制
 const currentTab = ref("competition");
+
+// ✨ 新增：存放用户列表的变量
+const userList = ref([]);
 
 // 账号维护表单状态
 const profileForm = reactive({
@@ -53,6 +53,21 @@ const form = reactive({
   startTime: "",
   endTime: "",
 });
+
+// ✨ 新增：处理点击“系统账号管理”菜单的逻辑
+const handleUserListTab = async () => {
+  currentTab.value = "userList"; // 切换视图
+  loading.value = true;
+  try {
+    // 假设你在 competitionApi 里已经写了 getUserList 方法
+    userList.value = await competitionApi.getUserList();
+  } catch (error) {
+    console.error("加载用户列表失败:", error);
+    alert("无法获取用户列表，请检查后端接口 /api/users 是否正常");
+  } finally {
+    loading.value = false;
+  }
+};
 
 // ✨ 2. 新增：处理 Excel 上传导入
 const handleFileUpload = async (event) => {
@@ -210,6 +225,32 @@ const executeDelete = async () => {
   }
 };
 
+// ✨ 新增：删除单个账号的逻辑
+const removeUser = async (user) => {
+  // 1. 安全校验：不能删除自己
+  if (user.id === userStore.userInfo.id) {
+    return alert("❌ 无法删除当前登录的管理员账号");
+  }
+
+  // 2. 二次确认
+  if (!confirm(`确定要永久删除账号【${user.username}】吗？该操作不可撤销。`)) {
+    return;
+  }
+
+  try {
+    loading.value = true;
+    await competitionApi.deleteUser(user.id);
+    // 3. 更新本地列表数据，实现无刷新删除
+    userList.value = userList.value.filter((u) => u.id !== user.id);
+    alert("✅ 账号已成功移除");
+  } catch (error) {
+    console.error("删除用户失败:", error);
+    alert("删除失败，请检查后端权限配置");
+  } finally {
+    loading.value = false;
+  }
+};
+
 onMounted(() => fetchCompetitions());
 </script>
 
@@ -223,6 +264,7 @@ onMounted(() => fetchCompetitions());
 
       <nav class="menu">
         <div class="menu-group-title">竞赛管理业务</div>
+
         <div
           class="menu-item"
           :class="{ active: currentTab === 'competition' }"
@@ -230,6 +272,15 @@ onMounted(() => fetchCompetitions());
         >
           <el-icon><List /></el-icon> 竞赛列表管理
         </div>
+
+        <div
+          class="menu-item"
+          :class="{ active: currentTab === 'userList' }"
+          @click="handleUserListTab"
+        >
+          <el-icon><IconMenu /></el-icon> 系统账号管理
+        </div>
+
         <div
           class="menu-item"
           :class="{ active: currentTab === 'audit' }"
@@ -254,9 +305,8 @@ onMounted(() => fetchCompetitions());
           <el-icon><Lock /></el-icon> 修改个人密码
         </div>
       </nav>
-
       <div class="logout-box" @click="handleLogout">
-        <el-icon><SwitchButton /></el-icon> 退出系统
+        <el-icon size="16"><SwitchButton /></el-icon> 退出登录
       </div>
     </aside>
 
@@ -367,6 +417,50 @@ onMounted(() => fetchCompetitions());
           </div>
         </div>
 
+        <div v-if="currentTab === 'userList'" class="view-section">
+          <div class="action-bar">
+            <h2>系统账号总览</h2>
+          </div>
+          <div class="table-card">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>真实姓名</th>
+                  <th>登录账号</th>
+                  <th>联系电话</th>
+                  <th>身份角色</th>
+                  <th style="text-align: right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in userList" :key="user.id">
+                  <td>{{ user.name || "未填写" }}</td>
+                  <td>{{ user.username }}</td>
+                  <td>{{ user.phone || "未填写" }}</td>
+                  <td>
+                    <span
+                      :class="[
+                        'status-tag',
+                        user.role === 'admin' ? 'active' : 'end',
+                      ]"
+                    >
+                      {{ user.role === "admin" ? "管理员" : "学生" }}
+                    </span>
+                  </td>
+                  <td style="text-align: right">
+                    <button
+                      @click="removeUser(user)"
+                      class="text-btn danger-text"
+                      :disabled="user.id === userStore.userInfo.id"
+                    >
+                      删除账号
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div v-if="currentTab === 'profile'" class="view-section narrow-view">
           <div class="settings-card glass-effect">
             <div class="settings-header">
@@ -626,6 +720,7 @@ onMounted(() => fetchCompetitions());
   color: white;
   display: flex;
   flex-direction: column;
+  height: 100vh; /* ✨ 新增：确保侧边栏占满整个屏幕高度 */
 }
 .logo {
   height: 64px;
@@ -636,10 +731,12 @@ onMounted(() => fetchCompetitions());
   font-size: 18px;
   font-weight: bold;
   background: #002140;
+  flex-shrink: 0; /* ✨ 新增：防止logo被挤压 */
 }
 .menu {
   flex: 1;
   padding: 8px 0;
+  overflow-y: auto; /* ✨ 新增：菜单项过多时内部滚动，防止把底下的按钮挤出屏幕 */
 }
 .menu-group-title {
   padding: 24px 24px 8px;
@@ -662,19 +759,30 @@ onMounted(() => fetchCompetitions());
   background: #1890ff;
   color: white;
 }
+
 .logout-box {
+  margin-top: auto;
   padding: 20px 24px;
   border-top: 1px solid #ffffff1a;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #a6adb4;
+  cursor: pointer;
+  transition: 0.3s;
+  background: #001529; /* ✨ 新增：设置背景色，防止被后面滚动内容透视 */
+  flex-shrink: 0; /* ✨ 新增：钉死在底部，绝对不被压缩 */
+}
+
+.logout-box:hover {
   color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.05);
 }
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 防止整体页面出现双滚动条 */
 }
 .top-header {
   height: 64px;
@@ -684,6 +792,7 @@ onMounted(() => fetchCompetitions());
   align-items: center;
   padding: 0 24px;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  flex-shrink: 0;
 }
 .content-body {
   padding: 24px;
