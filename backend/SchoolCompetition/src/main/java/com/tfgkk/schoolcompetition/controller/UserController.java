@@ -13,11 +13,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/users") // ✨ 修正：增加 /api 前缀，匹配你前端的 baseURL
+@RequestMapping("/api/users")
 @CrossOrigin
 public class UserController {
 
@@ -25,32 +26,50 @@ public class UserController {
     private UserRepository userRepository;
 
     /**
-     * ✨ 新增：批量导入学生账号
-     * 逻辑：以电话作为账号和初始密码，角色固定为 student
+     * 批量导入学生账号
      */
     @PostMapping("/import")
     public ResponseEntity<?> importStudents(@RequestParam("file") MultipartFile file) throws IOException {
         EasyExcel.read(file.getInputStream(), User.class, new PageReadListener<User>(dataList -> {
             for (User item : dataList) {
-                // 1. 数据校验：如果电话为空则跳过
                 if (item.getPhone() == null || item.getPhone().isBlank()) continue;
-
-                // 2. 查重：如果该手机号（账号）已存在则跳过
                 if (userRepository.findByUsername(item.getPhone()).isPresent()) continue;
 
-                // 3. 填充学生信息
                 User student = new User();
                 student.setName(item.getName());
                 student.setPhone(item.getPhone());
-                student.setUsername(item.getPhone()); // 账号 = 电话
-                student.setPassword(item.getPhone()); // 密码 = 电话
-                student.setRole("student");           // 固定角色为学生
+                student.setUsername(item.getPhone());
+                student.setPassword(item.getPhone());
+                student.setRole("student");
 
                 userRepository.save(student);
             }
         })).sheet().doRead();
 
         return ResponseEntity.ok().body(Map.of("message", "导入完成，已自动跳过重复账号"));
+    }
+
+    /**
+     * ✨ 优化：删除某个用户
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        // 增加健壮性校验：如果数据库没有这个用户，直接返回 404
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.status(404).body(Map.of("message", "用户不存在或已被删除"));
+        }
+        userRepository.deleteById(id);
+        return ResponseEntity.ok().body(Map.of("message", "用户已删除"));
+    }
+
+    /**
+     * 获取所有用户信息
+     */
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        users.forEach(u -> u.setPassword(null));
+        return ResponseEntity.ok(users);
     }
 
     /**
@@ -74,7 +93,6 @@ public class UserController {
      */
     @PutMapping("/password")
     public ResponseEntity<?> updatePassword(@RequestBody Map<String, String> request) {
-        // 需注意前端传参是否包含 id
         if (!request.containsKey("id")) return ResponseEntity.badRequest().body("缺少用户ID");
 
         Long userId = Long.valueOf(request.get("id"));
@@ -95,7 +113,7 @@ public class UserController {
     }
 
     /**
-     * ✨ 学生端修改个人账号和密码
+     * 学生端修改个人账号和密码
      */
     @PutMapping("/student/update")
     public ResponseEntity<?> updateStudentAccount(@RequestBody Map<String, String> request) {
@@ -107,9 +125,7 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
 
-            // 1. 修改账号名 (需确保唯一性)
             if (newUsername != null && !newUsername.isBlank()) {
-                // 如果新账号名已被他人占用，返回错误
                 Optional<User> existing = userRepository.findByUsername(newUsername);
                 if (existing.isPresent() && !existing.get().getId().equals(userId)) {
                     return ResponseEntity.badRequest().body(Map.of("message", "该账号名已存在"));
@@ -117,7 +133,6 @@ public class UserController {
                 user.setUsername(newUsername);
             }
 
-            // 2. 修改密码
             if (newPassword != null && !newPassword.isBlank()) {
                 user.setPassword(newPassword);
             }
