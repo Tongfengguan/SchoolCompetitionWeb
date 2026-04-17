@@ -1,10 +1,9 @@
 package com.tfgkk.schoolcompetition.controller;
 
+import com.tfgkk.schoolcompetition.common.Result;
 import com.tfgkk.schoolcompetition.entity.Competition;
-import com.tfgkk.schoolcompetition.repository.CompetitionRepository;
-import com.tfgkk.schoolcompetition.repository.RegistrationRepository; // 导入报名库
+import com.tfgkk.schoolcompetition.service.CompetitionService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional; // 导入事务
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,39 +14,30 @@ import java.util.List;
 public class CompetitionController {
 
     @Autowired
-    private CompetitionRepository competitionRepository;
-
-    @Autowired
-    private RegistrationRepository registrationRepository;
+    private CompetitionService competitionService;
 
     /**
-     * 获取竞赛列表 (升级版：支持关键词模糊搜索)
+     * 获取竞赛列表
      */
     @GetMapping
-    public List<Competition> getAllCompetitions(@RequestParam(required = false) String keyword) {
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // 如果有关键词，调用自定义的搜索方法
-            return competitionRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword);
-        }
-        // 否则返回全部，并按 ID 倒序排列（让新发布的排在前面）
-        return competitionRepository.findAllByOrderByIdDesc();
-    }
-
-    @PostMapping
-    public Competition addCompetition(@RequestBody Competition competition) {
-        return competitionRepository.save(competition);
+    public Result<List<Competition>> getAllCompetitions(@RequestParam(required = false) String keyword) {
+        return Result.success(competitionService.getAllCompetitions(keyword));
     }
 
     /**
-     * 删除竞赛 (升级版：级联删除报名记录)
+     * 发布竞赛
+     */
+    @PostMapping
+    public Result<Competition> addCompetition(@RequestBody Competition competition) {
+        return Result.success(competitionService.createCompetition(competition));
+    }
+
+    /**
+     * 删除竞赛
      */
     @DeleteMapping("/{id}")
-    @Transactional // 🚨 关键：保证删除“竞赛”和“报名信息”是一个原子操作
-    public void deleteCompetition(@PathVariable Long id) {
-        // 1. 先根据竞赛 ID 清理掉所有的报名学生记录
-        registrationRepository.deleteByCompetitionId(id);
-
-        // 2. 再删除竞赛本体
-        competitionRepository.deleteById(id);
+    public Result<String> deleteCompetition(@PathVariable Long id) {
+        competitionService.deleteCompetition(id);
+        return Result.success("竞赛及相关报名信息已删除");
     }
 }
