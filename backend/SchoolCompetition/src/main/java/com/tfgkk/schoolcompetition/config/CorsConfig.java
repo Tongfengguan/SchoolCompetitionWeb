@@ -2,10 +2,19 @@ package com.tfgkk.schoolcompetition.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 将 /uploads/** 路径映射到磁盘上的实际文件夹
+        String path = System.getProperty("user.dir") + "/uploads/";
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + path);
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {

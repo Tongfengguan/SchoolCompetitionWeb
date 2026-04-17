@@ -3,6 +3,8 @@ package com.tfgkk.schoolcompetition.service;
 import com.tfgkk.schoolcompetition.dto.UserDTO;
 import com.tfgkk.schoolcompetition.dto.UserLoginDTO;
 import com.tfgkk.schoolcompetition.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -11,7 +13,7 @@ import java.util.List;
 public interface UserService {
     UserDTO login(UserLoginDTO loginDTO);
     UserDTO register(User user);
-    List<UserDTO> getAllUsers();
+    Page<UserDTO> getAllUsers(Pageable pageable);
     void deleteUser(Long id);
     void updateProfile(UserDTO userDTO);
     void updatePassword(Long userId, String oldPassword, String newPassword);

@@ -2,18 +2,26 @@
 import { ref, onMounted } from "vue";
 import { useUserStore } from "@/stores/user";
 import { competitionApi } from "@/api/competition";
-import { Menu as IconMenu, UserFilled } from "@element-plus/icons-vue";
 
 const userStore = useUserStore();
 const userList = ref([]);
 const loading = ref(false);
+const total = ref(0);
+const currentPage = ref(1);
+const pageSize = ref(10);
 const fileInput = ref(null);
 const activeSubTab = ref("list"); // 'list' or 'import'
 
 const fetchUsers = async () => {
   loading.value = true;
   try {
-    userList.value = await competitionApi.getUserList();
+    const res = await competitionApi.getUserList({
+      page: currentPage.value - 1,
+      size: pageSize.value
+    });
+    // ✨ 核心修复：后端返回的是 Page 对象，数据在 content 属性中
+    userList.value = res.content || [];
+    total.value = res.totalElements || 0;
   } catch (error) {
     console.error("加载用户列表失败:", error);
   } finally {
@@ -21,17 +29,25 @@ const fetchUsers = async () => {
   }
 };
 
+const handlePageChange = (page) => {
+  currentPage.value = page;
+  fetchUsers();
+};
+
 const removeUser = async (user) => {
   if (user.id === userStore.userInfo.id) {
     return alert("❌ 无法删除当前登录的管理员账号");
   }
-  if (!confirm(`确定要永久删除账号【${user.username}】吗？`)) return;
+  if (!confirm(`确定要永久删除账号【${user.username}】吗？\n注意：如果该学生已有报名记录，删除可能会失败。`)) return;
 
   try {
     loading.value = true;
     await competitionApi.deleteUser(user.id);
-    userList.value = userList.value.filter((u) => u.id !== user.id);
     alert("✅ 账号已成功移除");
+    fetchUsers(); // 重新拉取当前页
+  } catch (error) {
+    // 捕获后端抛出的外键约束等错误
+    console.error("删除失败:", error);
   } finally {
     loading.value = false;
   }
@@ -120,6 +136,17 @@ onMounted(() => fetchUsers());
             </tr>
           </tbody>
         </table>
+        
+        <!-- ✨ 补全分页组件 -->
+        <div class="pagination-container" v-if="total > 0">
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="pageSize"
+            layout="total, prev, pager, next"
+            :total="total"
+            @current-change="handlePageChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -163,73 +190,21 @@ onMounted(() => fetchUsers());
 </template>
 
 <style scoped>
-.tabs-header {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
-}
-.tab-item {
-  padding: 10px 20px;
-  cursor: pointer;
-  color: #64748b;
-  font-weight: 500;
-}
-.tab-item.active {
-  color: #3b82f6;
-  border-bottom: 2px solid #3b82f6;
-}
-.action-bar {
-  margin-bottom: 20px;
-}
-.table-card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-.modern-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.modern-table th, .modern-table td {
-  padding: 16px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-.status-tag {
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-}
+.tabs-header { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
+.tab-item { padding: 10px 20px; cursor: pointer; color: #64748b; font-weight: 500; }
+.tab-item.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+.action-bar { margin-bottom: 20px; }
+.table-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.modern-table { width: 100%; border-collapse: collapse; }
+.modern-table th, .modern-table td { padding: 16px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+.status-tag { padding: 4px 12px; border-radius: 4px; font-size: 12px; }
 .status-tag.active { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
 .status-tag.end { background: #f5f5f5; color: #8c8c8c; border: 1px solid #d9d9d9; }
 .text-btn { background: none; border: none; color: #1890ff; cursor: pointer; }
 .danger-text { color: #ff4d4f; }
-
-.narrow-view-content {
-  display: flex;
-  justify-content: center;
-}
-.settings-card {
-  width: 100%;
-  max-width: 500px;
-  padding: 30px;
-}
-.upload-zone {
-  border: 2px dashed #e2e8f0;
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  background: #f8fafc;
-  cursor: pointer;
-}
-.import-notice {
-  margin-top: 20px;
-  padding: 15px;
-  background: #fffbeb;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #d97706;
-}
+.pagination-container { margin-top: 20px; display: flex; justify-content: flex-end; }
+.narrow-view-content { display: flex; justify-content: center; }
+.settings-card { width: 100%; max-width: 500px; padding: 30px; }
+.upload-zone { border: 2px dashed #e2e8f0; border-radius: 12px; padding: 40px 20px; text-align: center; background: #f8fafc; cursor: pointer; }
+.import-notice { margin-top: 20px; padding: 15px; background: #fffbeb; border-radius: 8px; font-size: 13px; color: #d97706; }
 </style>

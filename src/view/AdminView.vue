@@ -2,16 +2,18 @@
 import { ref } from "vue";
 import { useUserStore } from "@/stores/user";
 import { useRouter } from "vue-router";
-import { Trophy, List, Menu as IconMenu, EditPen, SwitchButton } from "@element-plus/icons-vue";
+// 引入图标
+import { Trophy, List, Menu as IconMenu, EditPen, SwitchButton, DataBoard } from "@element-plus/icons-vue";
 
 // 引入拆分后的子组件
+import Dashboard from "@/components/admin/Dashboard.vue";
 import CompetitionList from "@/components/admin/CompetitionList.vue";
 import UserManagement from "@/components/admin/UserManagement.vue";
 import AccountSettings from "@/components/admin/AccountSettings.vue";
 
 const userStore = useUserStore();
 const router = useRouter();
-const currentTab = ref("competition");
+const currentTab = ref("dashboard"); // 默认展示看板
 
 const handleLogout = () => {
   userStore.clearUser();
@@ -20,9 +22,10 @@ const handleLogout = () => {
 
 const getTabTitle = () => {
   switch(currentTab.value) {
+    case 'dashboard': return '系统运行概览';
     case 'competition': return '竞赛列表管理';
     case 'users': return '系统账号管理';
-    case 'settings': return '账号信息维护';
+    case 'settings': return '账号设置';
     default: return '管理中心';
   }
 };
@@ -37,6 +40,15 @@ const getTabTitle = () => {
       </div>
 
       <nav class="menu">
+        <div class="menu-group-title">数据概览</div>
+        <div 
+          class="menu-item" 
+          :class="{ active: currentTab === 'dashboard' }"
+          @click="currentTab = 'dashboard'"
+        >
+          <el-icon><DataBoard /></el-icon> 管理控制台
+        </div>
+
         <div class="menu-group-title">业务管理</div>
         <div 
           class="menu-item" 
@@ -80,6 +92,7 @@ const getTabTitle = () => {
 
       <div class="content-body">
         <!-- 根据当前 Tab 渲染对应的子组件 -->
+        <Dashboard v-if="currentTab === 'dashboard'" />
         <CompetitionList v-if="currentTab === 'competition'" />
         <UserManagement v-if="currentTab === 'users'" />
         <AccountSettings v-if="currentTab === 'settings'" />
@@ -96,7 +109,7 @@ const getTabTitle = () => {
 .menu-group-title { padding: 24px 24px 8px; font-size: 11px; color: #596780; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
 .menu-item { padding: 12px 24px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.3s; color: #a6adb4; }
 .menu-item:hover { color: white; background: rgba(255,255,255,0.05); }
-.menu-item.active { background: #1890ff; color: white; }
+.menu-item.active { background: #3b82f6; color: white; }
 .logout-box { padding: 20px 24px; border-top: 1px solid #ffffff1a; display: flex; align-items: center; gap: 10px; color: #a6adb4; cursor: pointer; }
 .logout-box:hover { color: #ff4d4f; }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }

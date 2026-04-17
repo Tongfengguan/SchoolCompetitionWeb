@@ -11,16 +11,16 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    ILucideAlertTriangle: typeof import('~icons/lucide/alert-triangle')['default']
+    AccountSettings: typeof import('./src/components/admin/AccountSettings.vue')['default']
+    CompetitionList: typeof import('./src/components/admin/CompetitionList.vue')['default']
+    Dashboard: typeof import('./src/components/admin/Dashboard.vue')['default']
     ILucideArrowRight: typeof import('~icons/lucide/arrow-right')['default']
     ILucideAward: typeof import('~icons/lucide/award')['default']
     ILucideCalendarDays: typeof import('~icons/lucide/calendar-days')['default']
     ILucideDot: typeof import('~icons/lucide/dot')['default']
-    ILucideDownload: typeof import('~icons/lucide/download')['default']
     ILucideFileSpreadsheet: typeof import('~icons/lucide/file-spreadsheet')['default']
-    ILucideFileUp: typeof import('~icons/lucide/file-up')['default']
+    ILucideFileText: typeof import('~icons/lucide/file-text')['default']
     ILucideGraduationCap: typeof import('~icons/lucide/graduation-cap')['default']
-    ILucideInbox: typeof import('~icons/lucide/inbox')['default']
     ILucideLayoutGrid: typeof import('~icons/lucide/layout-grid')['default']
     ILucideLoader2: typeof import('~icons/lucide/loader2')['default']
     ILucideLogOut: typeof import('~icons/lucide/log-out')['default']
@@ -31,10 +31,9 @@ declare module 'vue' {
     ILucideUserCheck: typeof import('~icons/lucide/user-check')['default']
     ILucideUserCog: typeof import('~icons/lucide/user-cog')['default']
     ILucideUsers: typeof import('~icons/lucide/users')['default']
-    ILucideUsers2: typeof import('~icons/lucide/users2')['default']
-    ILucideUserX: typeof import('~icons/lucide/user-x')['default']
     ILucideX: typeof import('~icons/lucide/x')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UserManagement: typeof import('./src/components/admin/UserManagement.vue')['default']
   }
 }

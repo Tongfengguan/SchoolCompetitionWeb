@@ -16,4 +16,6 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     boolean existsByCompetitionIdAndStudentId(Long competitionId, String studentId);
 
     void deleteByCompetitionId(Long competitionId);
-}
+
+    void deleteByStudentId(String studentId);
+    }

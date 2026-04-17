@@ -7,6 +7,8 @@ import com.tfgkk.schoolcompetition.repository.CompetitionRepository;
 import com.tfgkk.schoolcompetition.repository.RegistrationRepository;
 import com.tfgkk.schoolcompetition.service.CompetitionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,11 @@ public class CompetitionServiceImpl implements CompetitionService {
     private RegistrationRepository registrationRepository;
 
     @Override
-    public List<Competition> getAllCompetitions(String keyword) {
+    public Page<Competition> getAllCompetitions(String keyword, Pageable pageable) {
         if (keyword != null && !keyword.trim().isEmpty()) {
-            return competitionRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword);
+            return competitionRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword, pageable);
         }
-        return competitionRepository.findAllByOrderByIdDesc();
+        return competitionRepository.findAllByOrderByIdDesc(pageable);
     }
 
     @Override

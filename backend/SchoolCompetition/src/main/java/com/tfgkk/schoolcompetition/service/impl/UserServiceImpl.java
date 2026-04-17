@@ -4,14 +4,19 @@ import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.read.listener.PageReadListener;
 import com.tfgkk.schoolcompetition.common.BCryptUtil;
 import com.tfgkk.schoolcompetition.common.BusinessException;
+import com.tfgkk.schoolcompetition.common.JwtUtil;
 import com.tfgkk.schoolcompetition.dto.UserDTO;
 import com.tfgkk.schoolcompetition.dto.UserLoginDTO;
 import com.tfgkk.schoolcompetition.entity.User;
+import com.tfgkk.schoolcompetition.repository.RegistrationRepository;
 import com.tfgkk.schoolcompetition.repository.UserRepository;
 import com.tfgkk.schoolcompetition.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -36,6 +41,11 @@ public class UserServiceImpl implements UserService {
 
         UserDTO userDTO = new UserDTO();
         BeanUtils.copyProperties(user, userDTO);
+
+        // 🔥 签发 JWT Token
+        String token = JwtUtil.generateToken(user.getUsername(), user.getRole());
+        userDTO.setToken(token);
+
         return userDTO;
     }
 
@@ -57,16 +67,28 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream().map(user -> {
+    public Page<UserDTO> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable).map(user -> {
             UserDTO dto = new UserDTO();
             BeanUtils.copyProperties(user, dto);
             return dto;
-        }).collect(Collectors.toList());
+        });
     }
 
+    @Autowired
+    private RegistrationRepository registrationRepository;
+
     @Override
+    @Transactional
     public void deleteUser(Long id) {
+        // ✨ 先查出用户名（学号）
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            // 根据用户名清理报名记录
+            registrationRepository.deleteByStudentId(user.getUsername());
+        }
+        
+        // 再删除用户本身
         userRepository.deleteById(id);
     }
 

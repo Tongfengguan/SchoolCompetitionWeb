@@ -2,8 +2,8 @@ import request from "@/utils/request";
 
 export const competitionApi = {
   // --- 竞赛管理 ---
-  // 获取所有竞赛
-  getList: () => request.get("/competitions"),
+  // 获取竞赛列表 (支持分页与搜索参数)
+  getList: (params) => request.get("/competitions", { params }),
   // 发布新竞赛
   create: (data) => request.post("/competitions", data),
   // 删除竞赛
@@ -41,8 +41,21 @@ export const competitionApi = {
   updateProfile: (data) => request.put("/users/profile", data),
   // 修改个人密码
   updatePassword: (data) => request.put("/users/password", data),
-  // 获取所有账号信息
-  getUserList: () => request.get("/users"),
+  // 获取所有账号信息 (支持分页参数)
+  getUserList: (params) => request.get("/users", { params }),
   // 删除账号
   deleteUser: (id) => request.delete(`/users/${id}`),
-};
+
+  // --- ✨ 新增：文件上传 ---
+  uploadFile: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request.post("/files/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  // --- ✨ 新增：可视化看板 ---
+  getStatistics: () => request.get("/dashboard/statistics"),
+  };
+

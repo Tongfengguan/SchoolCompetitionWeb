@@ -25,6 +25,8 @@ public class Competition {
 
     private Integer status = 1;
 
+    private String fileUrl; // 竞赛规则附件 URL
+
     // ==========================================
     // 手动添加 Getter 和 Setter 方法，确保万无一失
     // ==========================================
@@ -69,11 +71,9 @@ public class Competition {
         this.endTime = endTime;
     }
 
-    public Integer getStatus() {
-        return status;
-    }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
 
-    public void setStatus(Integer status) {
-        this.status = status;
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
     }
-}

@@ -1,5 +1,6 @@
 package com.tfgkk.schoolcompetition.common;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -13,7 +14,7 @@ public class BCryptUtil {
     public static String encode(String password) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes());
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Encryption algorithm not found", e);
