@@ -3,6 +3,9 @@ package com.tfgkk.schoolcompetition.service;
 import com.tfgkk.schoolcompetition.dto.UserDTO;
 import com.tfgkk.schoolcompetition.dto.UserLoginDTO;
 import com.tfgkk.schoolcompetition.entity.User;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.util.List;
 
 public interface UserService {
